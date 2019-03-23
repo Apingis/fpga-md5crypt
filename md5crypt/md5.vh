@@ -9,7 +9,7 @@
 
 // Include Verilog code for "blackbox" modules
 // (ISE Project Navigator requires restart after switching this)
-`define	SIMULATION
+//`define	SIMULATION
 
 
 // ===== Algorithm constants and operations =====
@@ -20,6 +20,11 @@
 	| (((n) & 16'hff00) << 8)	\
 	| (((n) >> 8) & 16'hff00)	\
 	| ((n) >> 24))
+
+// =====================================================
+//
+`define	N_CORES		3
+`define	N_THREADS	12
 
 
 // ===== Block processing options =====
@@ -73,7 +78,7 @@
 // width of each procb record
 `define	PROCB_D_WIDTH		(`MEM_ADDR_MSB+1 + `PROCB_CNT_MSB+1 +1)
 
-`define	PROCB_SAVE_WIDTH		(`MEM_ADDR_MSB+2+1 + `PROCB_CNT_MSB+1 \
+`define	PROCB_SAVE_WIDTH		(3 + `MEM_ADDR_MSB+2+1 + `PROCB_CNT_MSB+1 \
 	+ `PROCB_TOTAL_MSB+1 + 4)
 
 
@@ -83,7 +88,11 @@
 // 16 registers
 `define	REG_ADDR_MSB	3
 // Program entry points
+`define	ENTRY_PTS_EN
 `define	ENTRY_PT_MSB	0
+//
+// Allow ADDC/SUBB instructions (slow; 210-220 max.)
+//`define	INSTR_SUBB_EN
 //
 // Each instruction consists of:
 `define	OP_CODE_LEN		5
@@ -227,7 +236,7 @@
 
 // ===== Instructions =====
 //
-// *** Instructions - SHA256 subsystem ***
+// *** Instructions - Integrated Cryptographic subsystem ***
 `define	NEW_CTX(save_addr,save_len) {`FIELD_A 0, `EXEC_OPT_TS_WR_RDY, \
 	`IF_NONE, `FIELD_B save_addr, `FIELD_C save_len, `OP_CODE_NEW_CTX}
 
@@ -251,12 +260,8 @@
 // *** Instructions - integer ***
 `define	ADD_R_C(r,const) {`FIELD_A r, `EXEC_OPT_NONE, \
 	`CONDITION, `FIELD_B r, `FIELD_C const, `OP_CODE_ADD_R_C}
-`define	ADDC_R_C(r,const) {`FIELD_A r, `EXEC_OPT_NONE, \
-	`CONDITION, `FIELD_B r, `FIELD_C const, `OP_CODE_ADDC_R_C}
 `define	SUB_R_C(dst,src,const) {`FIELD_A src, `EXEC_OPT_NONE, \
 	`CONDITION, `FIELD_B dst, `FIELD_C const, `OP_CODE_SUB_R_C}
-`define	SUBB_R_C(dst,src,const) {`FIELD_A src, `EXEC_OPT_NONE, \
-	`CONDITION, `FIELD_B dst, `FIELD_C const, `OP_CODE_SUBB_R_C}
 `define	INC_RST(r,const) {`FIELD_A r, `EXEC_OPT_NONE, \
 	`CONDITION, `FIELD_B r, `FIELD_C const, `OP_CODE_INC_RST}
 `define	MV_R_C(r,const) {`FIELD_A r, `EXEC_OPT_NONE, \
@@ -268,6 +273,13 @@
 	`CONDITION, `FIELD_B dst, `FIELD_C 0, `OP_CODE_MV_R_R}
 `define	AND_R_C(dst,src,const) {`FIELD_A src, `EXEC_OPT_NONE, \
 	`CONDITION, `FIELD_B dst, `FIELD_C const, `OP_CODE_AND}
+
+`ifdef	INSTR_SUBB_EN
+`define	ADDC_R_C(r,const) {`FIELD_A r, `EXEC_OPT_NONE, \
+	`CONDITION, `FIELD_B r, `FIELD_C const, `OP_CODE_ADDC_R_C}
+`define	SUBB_R_C(dst,src,const) {`FIELD_A src, `EXEC_OPT_NONE, \
+	`CONDITION, `FIELD_B dst, `FIELD_C const, `OP_CODE_SUBB_R_C}
+`endif
 
 
 // *** Instructions - I/O ***

@@ -70,7 +70,7 @@ module md5crypt_test();
 
 		// limit is 64K (fifo_input1, internal buffer in pkt_comm_helper.vh)
 		//for (k=0; k < 500; k=k+1)
-		//for (k=0; k < 60; k=k+1)
+		for (k=0; k < 20; k=k+1)
 			word_list_add("a");//bcdefgh");
 		
 		word_list_add("abc");

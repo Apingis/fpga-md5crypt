@@ -11,8 +11,8 @@
 
 
 module memory #(
-	parameter N_CORES = 3,
-	parameter N_THREADS = 4 * N_CORES,
+	parameter N_CORES = `N_CORES,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
 	input CLK,
@@ -34,8 +34,7 @@ module memory #(
 
 	// Thread State
 	output [N_THREADS_MSB :0] ts_num,
-	//output reg ts_wr_en = 0,
-	output ts_wr_en,
+	output reg ts_wr_en = 0,
 	output [`THREAD_STATE_MSB :0] ts_wr,
 
 	// Read
@@ -70,21 +69,6 @@ module memory #(
 		mem[3] = 32'h00636261; // "abc"
 `endif
 	end
-
-
-	// =================================================================
-	// *** Computation data (set #2) ***
-	//
-	(* RAM_STYLE="DISTRIBUTED" *)
-	reg [`COMP_DATA2_MSB :0] comp_data2 [0: N_THREADS-1];
-	always @(posedge CLK)
-		if (comp_data2_wr_en)
-			comp_data2 [comp_data2_thread_num] <= comp_wr_data2;
-
-	wire [`MEM_ADDR_MSB :0] comp_save_addr;
-	wire [2:0] comp_save_len;
-	assign { comp_save_addr, comp_save_len }
-		= comp_data2 [ {core_num_r, ctx_num_r, seq_num_r} ];
 
 
 	// =================================================================
@@ -138,9 +122,11 @@ module memory #(
 	// Update thread_state
 	assign ts_num = {core_num_r, ctx_num_r, seq_num_r};
 	assign ts_wr = `THREAD_STATE_WR_RDY;
-	//always @(posedge CLK)
-	//	ts_wr_en <= cnt == 1;
-	assign ts_wr_en = cnt == 1;
+	always @(posedge CLK)
+		if (ts_wr_en)
+			ts_wr_en <= 0;
+		else if (cnt == 1)
+			ts_wr_en <= 1;
 
 	// FULL flag for external input
 	always @(posedge CLK)
@@ -148,11 +134,28 @@ module memory #(
 
 
 	// =================================================================
+	// *** Computation data (set #2) ***
+	//
+	(* RAM_STYLE="DISTRIBUTED" *)
+	reg [`COMP_DATA2_MSB :0] comp_data2 [0: N_THREADS-1];
+	always @(posedge CLK)
+		if (comp_data2_wr_en)
+			comp_data2 [comp_data2_thread_num] <= comp_wr_data2;
+
+	reg [`MEM_ADDR_MSB :0] comp_save_addr;
+	reg [2:0] comp_save_len;
+	always @(posedge CLK)
+		if (state != STATE_NONE)
+			{ comp_save_addr, comp_save_len }
+				<= comp_data2 [ {core_num_r, ctx_num_r, seq_num_r} ];
+
+
+	// =================================================================
 	// *** Write ***
 	//
 	reg [31:0] input_r;
 	reg [`MEM_TOTAL_MSB :0] ext_wr_addr_r;
-	reg wr_en = 0, ext_wr_en_r = 0;
+	reg wr_en_r = 0, ext_wr_en_r = 0;
 
 	if (N_CORES == 3) begin
 
@@ -160,31 +163,29 @@ module memory #(
 		wire [32 + 32*N_CORES-1 :0] input_mux = {ext_din, core_din};
 		(* KEEP="true" *) wire [1:0] input_mux_addr = ext_wr_en
 			? 2'b11 : core_num_r;
-		wire input_r_wr_en = ext_wr_en | state == STATE_WR1
-			& ({1'b0, cnt - 1'b1}) < comp_save_len;
+		wire input_r_wr_en = ext_wr_en | state == STATE_WR1;
 
 		always @(posedge CLK)
 			if (input_r_wr_en) begin
 				input_r <= input_mux [32*input_mux_addr +:32];
-				wr_en <= 1;
+				wr_en_r <= 1;
 			end
 			else
-				wr_en <= 0;
+				wr_en_r <= 0;
 
 	end else begin // N_CORES != 3
 
 		always @(posedge CLK)
 			if (ext_wr_en) begin
-				wr_en <= 1;
+				wr_en_r <= 1;
 				input_r <= ext_din;
 			end
-			else if ( ({1'b0, cnt - 1'b1}) < comp_save_len
-					& state == STATE_WR1) begin
-				wr_en <= 1;
+			else if (state == STATE_WR1) begin
+				wr_en_r <= 1;
 				input_r <= core_din [32*core_num_r +:32];
 			end
 			else
-				wr_en <= 0;
+				wr_en_r <= 0;
 
 	end // N_CORES
 
@@ -201,7 +202,7 @@ module memory #(
 		= {core_num_r, ctx_num_r, seq_num_r, wr_addr_local};
 
 	always @(posedge CLK)
-		if (wr_en)
+		if (ext_wr_en_r | wr_en_r & ({1'b0, cnt}) < comp_save_len)
 			mem [ext_wr_en_r ? ext_wr_addr_r : wr_addr] <= input_r;
 
 
@@ -228,7 +229,7 @@ endmodule
 
 
 module encoder4 #(
-	parameter N_CORES = 4
+	parameter N_CORES = -1
 	)(
 	input [N_CORES-1 :0] in,
 	output [1:0] out

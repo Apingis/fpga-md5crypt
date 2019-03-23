@@ -257,16 +257,18 @@ initial begin
 	instr_mem[157] = `NEW_CTX(`ADDR_alt_result,4);
 	instr_mem[158] = `PROCESS_BYTES_R(`ADDR_salt,`R_salt_len);
 	instr_mem[159] = `PROCESS_BYTES_R_FINISH_CTX(`ADDR_key,`R_key_len);
-	instr_mem[160] = `NOP;
-	instr_mem[161] = `SUB_R_C(`R0,`R0,1);
-	instr_mem[162] = `SUBB_R_C(`R1,`R1,0);
-	instr_mem[163] = `NOP;
-	instr_mem[164] = `PROCESS_BYTES_C(`ADDR_alt_result,16);
-	instr_mem[165] = `PROCESS_BYTES_R_FINISH_CTX(`ADDR_key,`R_key_len);
-	instr_mem[166] = `SUB_R_C(`R0,`R0,1);
-	instr_mem[167] = `SUBB_R_C(`R1,`R1,0);
+	instr_mem[160] = `SUB_R_C(`R0,`R0,1);
+	`IF(`IF_CARRY)
+	instr_mem[161] = `SUB_R_C(`R1,`R1,1); `IF(`IF_NONE)
+	instr_mem[162] = `PROCESS_BYTES_C(`ADDR_alt_result,16);
+	instr_mem[163] = `PROCESS_BYTES_R_FINISH_CTX(`ADDR_key,`R_key_len);
+	instr_mem[164] = `SUB_R_C(`R0,`R0,1);
 	`IF(`IF_NOT_CARRY)
-	instr_mem[168] = `JMP(164); `IF(`IF_NONE)
+	instr_mem[165] = `JMP(162); `IF(`IF_NONE)
+	instr_mem[166] = `SUB_R_C(`R1,`R1,1);
+	`IF(`IF_NOT_CARRY)
+	instr_mem[167] = `JMP(162); `IF(`IF_NONE)
+	instr_mem[168] = `NOP;
 	instr_mem[169] = `JMP(170);
 	// JMP ensures - computation complete, result written into memory
 	

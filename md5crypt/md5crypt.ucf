@@ -153,6 +153,7 @@ INST "pkt_comm/units[30].unit_*_regs/stage[3].r*" AREA_GROUP="node10";
 // ===========================================================
 // Unit 0
 AREA_GROUP "u0_0" RANGE=SLICE_X114Y182:SLICE_X127Y189; # (*core) 14x8=448
+#AREA_GROUP "u0_0" RANGE=SLICE_X114Y178:SLICE_X127Y189;
 AREA_GROUP "u0_0" RANGE=RAMB8_X5Y90:RAMB8_X5Y93;
 INST "pkt_comm/units[0].unit/cores[0].core" AREA_GROUP="u0_0";
 
@@ -737,12 +738,12 @@ INST "output_fifo*" AREA_GROUP="pkt_comm";
 
 // ===========================================================
 // procb
-NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_addr_t*" TIG;
-NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_total_t*" TIG;
-NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_comp_active_t" TIG;
-NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_procb_active_t" TIG;
+#NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_addr_t*" TIG;
+#NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_total_t*" TIG;
+#NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_comp_active_t" TIG;
+#NET "pkt_comm/units[*].unit/ctrl/engine/process_bytes/saved_procb_active_t" TIG;
 // cpu
-NET "pkt_comm/units[*].unit/ctrl/cpu/uob_thread_num*" TIG;
+#NET "pkt_comm/units[*].unit/ctrl/cpu/uob_thread_num*" TIG;
 // pkt_comm
 
 NET "pkt_comm/mode_cmp" TIG;

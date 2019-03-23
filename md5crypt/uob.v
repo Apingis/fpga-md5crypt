@@ -28,15 +28,16 @@
 //    'rd_en' no longer controls the data flow.
 // 2. Output are header (1 word) and (OUT_N_WORDS * OUT_WIDTH) bits.
 //
-module uob16pq #(
-	parameter N_THREADS = 6,
+module uob #(
+	parameter ASYNC = 0,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1),
 	parameter IN_WIDTH = 16,
 	parameter PKT_LEN = 12, // in input words
-	parameter PKT_QUEUE_MSB = 3, // 16 packets
+	parameter PKT_QUEUE_MSB = 3,
 	parameter OUT_WIDTH = `UNIT_OUTPUT_WIDTH,
 	parameter RATIO = IN_WIDTH / OUT_WIDTH,
-	parameter OUT_N_WORDS = PKT_LEN * RATIO //128 + 32
+	parameter OUT_N_WORDS = PKT_LEN * RATIO
 	)(
 	input clk_wr,
 
@@ -61,6 +62,7 @@ module uob16pq #(
 	// Input
 	//
 	// ***********************************
+	wire read_complete_sync, input_complete_sync;
 
 	always @(posedge clk_wr) begin
 		if (wr_en)
@@ -74,10 +76,17 @@ module uob16pq #(
 		end
 	end
 
-	// sync'd after packet is enqueued
-	sync_pulse3 sync_input_complete( .wr_clk(clk_wr),
-		.sig(set_input_complete), .busy(),
-		.rd_clk(clk_rd), .out(input_complete_sync) );
+	if (ASYNC) begin
+
+		// sync'd after packet is enqueued
+		sync_pulse sync_input_complete( .wr_clk(clk_wr),
+			.sig(set_input_complete), .busy(),
+			.rd_clk(clk_rd), .out(input_complete_sync) );
+
+	end else begin
+
+		assign input_complete_sync = set_input_complete;
+	end
 
 	reg [PKT_QUEUE_MSB:0] base_addr_wr = 0; // sync'd with clk_rd
 	reg [PKT_QUEUE_MSB:0] base_addr_rd = 0;
@@ -165,9 +174,16 @@ module uob16pq #(
 
 	assign enb = state_rd != STATE_NONE;
 
-	sync_pulse3 sync_read_complete( .wr_clk(clk_rd),
-		.sig(enqueued & ~queue_full), .busy(),
-		.rd_clk(clk_wr), .out(read_complete_sync) );
+	if (ASYNC) begin
+
+		sync_pulse sync_read_complete( .wr_clk(clk_rd),
+			.sig(enqueued & ~queue_full), .busy(),
+			.rd_clk(clk_wr), .out(read_complete_sync) );
+
+	end else begin
+
+		assign read_complete_sync = enqueued & ~queue_full;
+	end
 
 endmodule
 

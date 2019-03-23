@@ -17,11 +17,11 @@
 // because of Placement & Routing issues.
 //
 module unit_ctrl #(
-	parameter N_CORES = 3,
-	parameter N_THREADS = 4 * N_CORES,
+	parameter N_CORES = `N_CORES,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
-	input CLK, PKT_COMM_CLK,
+	input CLK,
 	// Unit Input
 	input [`UNIT_INPUT_WIDTH-1 :0] unit_in,
 	input unit_in_ctrl, unit_in_wr_en,
@@ -53,7 +53,7 @@ module unit_ctrl #(
 	//   CORES' CONTROLS
 	//
 	// **********************************************************
-	core_ctrl #( .N_CORES(N_CORES) ) core_ctrl(
+	core_ctrl core_ctrl(
 		.CLK(CLK), .core_start(core_start),
 		.ctx_num(core_ctx_num), .seq_num(core_seq_num)
 	);
@@ -82,7 +82,7 @@ module unit_ctrl #(
 	wire [31:0] mem_dout;
 
 
-	engine #( .N_CORES(N_CORES) ) engine(
+	engine engine(
 		.CLK(CLK),
 		// procb_buf
 		.procb_wr_thread_num(comp_procb_wr_thread_num),
@@ -125,13 +125,11 @@ module unit_ctrl #(
 	// **********************************************************
 	wire [`ENTRY_PT_MSB:0] entry_pt_curr;
 
-	unit_input_async #( .N_CORES(N_CORES)
-	) unit_input(
-		.WR_CLK(PKT_COMM_CLK),
+	unit_input unit_input(
+		.CLK(CLK),
 		.in(unit_in), .ctrl(unit_in_ctrl), .wr_en(unit_in_wr_en),
 		.afull(unit_in_afull), .ready(unit_in_ready),
 
-		.RD_CLK(CLK),
 		.out(ext_din), .mem_addr(ext_wr_addr),
 		.rd_en(ext_wr_en), .empty(unit_input_empty),
 
@@ -152,13 +150,13 @@ module unit_ctrl #(
 	wire [15:0] uob_data;
 	wire [`UOB_ADDR_MSB :0] uob_wr_addr;
 
-	uob16pq unit_output_buf(
+	uob unit_output_buf(
 		.clk_wr(CLK),
 		.din(uob_data), .wr_en(uob_wr_en), .wr_addr(uob_wr_addr),
 		.full(uob_full), .ready(uob_ready),
 		.set_input_complete(uob_set_input_complete),
 
-		.clk_rd(PKT_COMM_CLK),
+		.clk_rd(CLK),
 		.dout(dout), .rd_en(rd_en), .empty(empty)
 	);
 
@@ -169,7 +167,7 @@ module unit_ctrl #(
 	//
 	// **********************************************************
 
-	cpu #( .WIDTH(16), .N_CORES(N_CORES) ) cpu(
+	cpu #( .WIDTH(16) ) cpu(
 		.CLK(CLK),
 		.entry_pt_curr(entry_pt_curr),
 		// thread_state (ts) - using channel 1
@@ -201,7 +199,7 @@ module unit_ctrl #(
 	parameter N_THREADS = 4 * N_CORES,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
-	input CLK, PKT_COMM_CLK,
+	input CLK,
 	// Unit Input
 	input [`UNIT_INPUT_WIDTH-1 :0] unit_in,
 	input unit_in_ctrl, unit_in_wr_en,
@@ -233,11 +231,11 @@ endmodule
 
 
 module unit_ctrl_dummy #(
-	parameter N_CORES = 3,
-	parameter N_THREADS = 4 * N_CORES,
+	parameter N_CORES = `N_CORES,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
-	input CLK, PKT_COMM_CLK,
+	input CLK,
 	// Unit Input
 	input [`UNIT_INPUT_WIDTH-1 :0] unit_in,
 	input unit_in_ctrl, unit_in_wr_en,
@@ -248,30 +246,42 @@ module unit_ctrl_dummy #(
 	output empty,
 	// *** Cores ***
 	// (are kept separate because of Placement & Routing issues)
-	output [N_CORES-1:0] core_wr_en, core_start,
-	input [N_CORES-1:0] core_ready, core_dout_en, core_dout_seq,
+	output [N_CORES-1:0] core_wr_en, core_start, core_seq_num,
+	output core_ctx_num,
+	input [4*N_CORES-1:0] core_ready,
 	output [31:0] core_din,
 	output [3:0] core_wr_addr,
 	output [`BLK_OP_MSB:0] core_blk_op,
-	output core_seq, core_set_input_ready,
+	output core_input_ctx, core_input_seq, core_set_input_ready,
+	
+	input [N_CORES-1:0] core_dout_en, core_dout_seq_num,
+	input [N_CORES-1:0] core_dout_ctx_num,
 	input [32*N_CORES-1 :0] core_dout,
 
 	output [5:0] err
 	);
 
-	(* KEEP="true" *) assign unit_in_afull = 0;
-	(* KEEP="true" *) assign unit_in_ready = 0;
-	(* KEEP="true" *) assign dout = 0;
-	(* KEEP="true" *) assign empty = 1;
-	(* KEEP="true" *) assign core_wr_en = 0;
-	(* KEEP="true" *) assign core_dout_en = 0;
-	(* KEEP="true" *) assign core_dout_seq = 0;
-	(* KEEP="true" *) assign core_din = 0;
-	(* KEEP="true" *) assign core_wr_addr = 0;
-	(* KEEP="true" *) assign core_blk_op = 0;
-	(* KEEP="true" *) assign core_seq = 0;
-	(* KEEP="true" *) assign core_set_input_ready = 0;
-	(* KEEP="true" *) assign err = 0;
+	reg z = 0;
+	always @(posedge CLK)
+		z <= ~z;
+
+	assign unit_in_afull = z;
+	assign unit_in_ready = 0;
+	assign dout = {`UNIT_OUTPUT_WIDTH{z}};
+	assign empty = 1;
+
+	assign core_wr_en = {N_CORES{z}};
+	assign core_start = {N_CORES{z}};
+	assign core_seq_num = {N_CORES{z}};
+	assign core_ctx_num = z;
+	assign core_din = {32{z}};
+	assign core_wr_addr = {4{z}};
+	assign core_blk_op = {`BLK_OP_MSB+1{z}};
+	assign core_input_ctx = z;
+	assign core_input_seq = z;
+	assign core_set_input_ready = z;
+
+	assign err = 0;
 
 endmodule
 

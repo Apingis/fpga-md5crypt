@@ -43,11 +43,11 @@ module create_blk #(
 	output reg blk_end = 0, // asserts for 1 cycle at the end of the block
 
 	output reg save_wr_en = 1, // initialize procb_saved_state on startup
-	output reg [N_THREADS_MSB :0] save_thread_num = 0,
+	output [N_THREADS_MSB :0] save_thread_num,
 	output [`PROCB_SAVE_WIDTH-1 :0] save_data,
 
 	output reg mem_rd_en = 0,
-	output reg [N_THREADS_MSB :0] thread_num,
+	output reg [N_THREADS_MSB :0] thread_num = 0,
 	output reg [`MEM_ADDR_MSB :0] mem_rd_addr,
 	output reg [2:0] len = 4,
 	output reg [1:0] off = 0,
@@ -58,6 +58,8 @@ module create_blk #(
 	output reg err = 0
 	);
 
+	localparam BLK_SIZE = 64;
+
 	//
 	// State for save
 	//
@@ -66,14 +68,21 @@ module create_blk #(
 	reg save_fin = 0, save_padded0x80 = 0;
 	reg comp_active = 0, procb_active = 0;
 
-	assign save_data = { save_addr, save_bytes_left, total,
-		save_fin, save_padded0x80, comp_active, procb_active };
+	wire [2:0] save_align_limit = 3'd4 - save_addr[1:0];
+	wire align_limit_effective = save_align_limit < save_bytes_left;
+	wire [2:0] save_bytes_limit = align_limit_effective
+		? save_align_limit
+		: save_bytes_left < 4 ? save_bytes_left[1:0] : 3'd4;
 
+	assign save_data = { save_bytes_limit, save_addr, save_bytes_left,
+		total, save_fin, save_padded0x80, comp_active, procb_active };
+
+	assign save_thread_num = thread_num;
 
 	//
 	// Current block state
 	//
-	reg [6:0] blk_left = 64, blk_left2 = 60;
+	reg [6:0] blk_left = BLK_SIZE, blk_left2 = BLK_SIZE - 4;
 
 
 	localparam STATE_INIT = 0,
@@ -94,22 +103,20 @@ module create_blk #(
 		if (blk_end)
 			blk_end <= 0;
 
-		save_wr_en <= save_eqn;
+		if (save_wr_en & state != STATE_INIT)
+			save_wr_en <= 0;
 
 		if (blk_start) begin
 			save_padded0x80 <= 1'b0;
-			thread_num <= in_thread_num;
 			blk_op <= in_blk_op;
 		end
 
 		case(state)
 		STATE_INIT: begin
-			save_thread_num <= save_thread_num == N_THREADS-1
-				? {N_THREADS_MSB+1{1'b0}} : save_thread_num + 1'b1;
-			if (save_thread_num == N_THREADS-1) begin
-				//save_wr_en <= 0;
+			thread_num <= thread_num == N_THREADS-1
+				? {N_THREADS_MSB+1{1'b0}} : thread_num + 1'b1;
+			if (thread_num == N_THREADS-1)
 				state <= STATE_PROCB;
-			end
 		end
 
 		STATE_PROCB: begin
@@ -122,7 +129,7 @@ module create_blk #(
 			mem_rd_en <= wr_en_effective & in_len > 0 & blk_left > 0;
 
 			if (blk_start)
-				save_thread_num <= in_thread_num;
+				thread_num <= in_thread_num;
 
 			if (blk_start & ~new_comp & in_len == 0) begin
 				if (in_padded0x80)
@@ -133,16 +140,19 @@ module create_blk #(
 				add0pad <= 1;
 				off <= 0;
 				len <= 4;
-				blk_left2 <= 60;
+				blk_left2 <= BLK_SIZE - 4;
 				full <= 1;
 				state <= STATE_PAD0;
 			end
 
 			// block ends
 			else if (wr_en_effective & in_len >= blk_left) begin
-				//save_wr_en <= 1;
+				save_wr_en <= 1;
+				save_addr <= in_addr + blk_left[2:0];
+				save_fin <= in_fin;
+
 				blk_end <= 1;
-				blk_left <= 64;
+				blk_left <= BLK_SIZE;
 				blk_left2 <= blk_left - in_len;
 				add0x80pad <= 0;
 				add0pad <= 0;
@@ -193,13 +203,13 @@ module create_blk #(
 			save_padded0x80 <= 1;
 			off <= 0;
 
-			//save_bytes_left <= 0;
+			save_fin <= in_fin;
 
 			if (blk_left2[1:0] != 0) begin
 				len <= blk_left2[1:0];
 				blk_left2 <= { blk_left2[6:2], 2'b00 };
 			end
-			else begin // at 8-byte boundary
+			else begin
 				len <= 4;
 				blk_left2 <= blk_left2 - 3'd4;
 			end
@@ -207,10 +217,10 @@ module create_blk #(
 			comp_active <= 1;
 			procb_active <= 1;
 			if (blk_left2 <= 4) begin // block is finished
-				//save_wr_en <= 1;
+				save_wr_en <= 1;
 				full <= 0;
 				blk_end <= 1;
-				blk_left <= 64;
+				blk_left <= BLK_SIZE;
 				state <= STATE_PROCB;
 			end
 			else if (blk_left2 >= 9 & blk_left2 <= 12)
@@ -224,7 +234,7 @@ module create_blk #(
 			add0pad <= 1;
 			len <= 4;
 
-			//save_bytes_left <= 0;
+			save_fin <= in_fin;
 
 			blk_left2 <= blk_left2 - 3'd4;
 
@@ -232,10 +242,10 @@ module create_blk #(
 			procb_active <= 1;
 			if (blk_left2 <= 4) begin
 				// block is finished (padded with 0x80 and 0-15 zero bytes)
-				//save_wr_en <= 1;
+				save_wr_en <= 1;
 				full <= 0;
 				blk_end <= 1;
-				blk_left <= 64;
+				blk_left <= BLK_SIZE;
 				state <= STATE_PROCB;
 			end
 			else if (blk_left2 >= 9 & blk_left2 <= 12)
@@ -257,12 +267,13 @@ module create_blk #(
 
 			`BLK_OP_END_COMP_OUTPUT(blk_op) <= 1;
 			comp_active <= 0; // Computation is finished
-
 			procb_active <= 0;
-			//save_wr_en <= 1; // Block is finished
+
+			save_wr_en <= 1; // Block is finished
+
 			full <= 0;
 			blk_end <= 1;
-			blk_left <= 64;
+			blk_left <= BLK_SIZE;
 			state <= STATE_PROCB;
 		end
 		endcase
@@ -276,22 +287,12 @@ module create_blk #(
 				total
 			) + len_effective;
 
-	assign save_eqn = (1'b0
-		| state == STATE_INIT
-		| state == STATE_PROCB & wr_en_effective & in_len >= blk_left
-		| state == STATE_PAD_0x80 & blk_left2 <= 4
-		| state == STATE_PAD0 & blk_left2 <= 4
-		| state == STATE_TOTAL2
-	);
-
-	always @(posedge CLK) if (save_eqn) begin
-		save_addr <= in_addr + blk_left[2:0];
-		save_bytes_left <= (state == STATE_PAD_0x80
-				| state == STATE_PAD0 | state == STATE_TOTAL2)
-			? {`PROCB_CNT_MSB+1{1'b0}} : in_bytes_left_prev - blk_left[2:0];
-		save_fin <= in_fin;
-		//save_thread_num <= in_thread_num;
-	end
-
+	always @(posedge CLK)
+		if (state == STATE_PAD_0x80 | state == STATE_PAD0
+				| state == STATE_TOTAL2)
+			save_bytes_left <= 0;
+		else if (wr_en_effective & in_len >= blk_left
+				& state == STATE_PROCB)
+			save_bytes_left <= in_bytes_left_prev - blk_left[2:0];
 
 endmodule

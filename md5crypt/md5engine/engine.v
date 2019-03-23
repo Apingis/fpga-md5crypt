@@ -11,9 +11,9 @@
 
 
 module engine #(
-	parameter N_CORES = 3,
+	parameter N_CORES = `N_CORES,
 	parameter N_CORES_MSB = `MSB(N_CORES-1),
-	parameter N_THREADS = 4 * N_CORES,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
 	input CLK,
@@ -72,8 +72,7 @@ module engine #(
 	wire [N_THREADS_MSB :0] ts_wr_num2, ts_rd_num2, ts_num3;
 	wire [`THREAD_STATE_MSB :0] ts_wr2, ts_wr3, ts_rd2, ts_rd3;
 
-	thread_state #( .N_THREADS(N_THREADS)
-	) thread_state(
+	thread_state thread_state(
 		.CLK(CLK),
 		.wr_num1(ts_wr_num1), .wr_en1(ts_wr_en1), // channel 1 - CPU
 		.wr_state1(ts_wr1), .rd_num1(ts_rd_num1), .rd_state1(ts_rd1),
@@ -94,8 +93,7 @@ module engine #(
 	// **********************************************************
 	wire [`MEM_TOTAL_MSB :0] mem_rd_addr_procb;
 
-	memory #( .N_CORES(N_CORES)
-	) memory(
+	memory memory(
 		.CLK(CLK),
 		// comp. data set #2
 		.comp_data2_thread_num(procb_wr_thread_num),
@@ -162,8 +160,7 @@ module engine #(
 		.err(err[2]), .out(core_din)
 	);
 
-	core_input #( .N_CORES(N_CORES)
-	) core_input(
+	core_input core_input(
 		.CLK(CLK),
 		.realign_wr_en_r(realign_wr_en_r),
 		.realign_valid_eqn(realign_valid_eqn), .realign_valid(realign_valid),
@@ -189,8 +186,7 @@ module engine #(
 	wire [N_THREADS_MSB :0] procb_rd_thread_num;
 	wire [`PROCB_D_WIDTH-1 :0] procb_dout;
 
-	procb_buf #( .N_THREADS(N_THREADS)
-	) procb_buf(
+	procb_buf procb_buf(
 		.CLK(CLK),
 		.wr_thread_num(procb_wr_thread_num), .wr_en(procb_wr_en),
 		.din(procb_wr_data), .wr_cnt(procb_wr_cnt),
@@ -213,8 +209,7 @@ module engine #(
 	// added where required.
 	//
 	// **********************************************************
-	process_bytes #( .N_CORES(N_CORES)
-	) process_bytes(
+	process_bytes process_bytes(
 		.CLK(CLK),
 		// thread_state (ts) - using channel 2
 		.ts_wr_num(ts_wr_num2), .ts_wr_en(ts_wr_en2),

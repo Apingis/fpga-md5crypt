@@ -11,10 +11,12 @@
 
 
 module md5unit #(
-	parameter [63:0] UNIT_CONF = 0,
-	parameter N_CORES = 3,
+	parameter [63:0] UNIT_CONF = {
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b011, 4'd3, 4'd0, 4'd0, 8'd0
+	},
+	parameter N_CORES = `N_CORES,
 	parameter N_CORES_MSB = `MSB(N_CORES-1),
-	parameter N_THREADS = 4 * N_CORES,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
 	input CLK,
@@ -24,7 +26,6 @@ module md5unit #(
 	output unit_in_afull, unit_in_ready,
 
 	// Unit Output
-	input PKT_COMM_CLK,
 	output [`UNIT_OUTPUT_WIDTH-1 :0] dout,
 	input rd_en,
 	output empty
@@ -59,7 +60,7 @@ module md5unit #(
 		if (~CORE_IS_DUMMY & CORE_TYPE == 0) begin
 
 		(* KEEP_HIERARCHY="true" *)
-		md5core core(
+		md5core_type0 core(
 			.CLK(CLK),
 			.start(core_start[i]), .ctx_num(core_ctx_num),
 			.seq_num(core_seq_num[i]), .ready(core_ready[4*i +:4]),
@@ -137,7 +138,7 @@ module md5unit #(
 		(* KEEP_HIERARCHY="true" *)
 		unit_ctrl #( .N_CORES(N_CORES)
 		) ctrl(
-			.CLK(CLK), .PKT_COMM_CLK(PKT_COMM_CLK),
+			.CLK(CLK),
 			// Unit Input
 			.unit_in(unit_in), .unit_in_ctrl(unit_in_ctrl),
 			.unit_in_wr_en(unit_in_wr_en),
@@ -163,7 +164,7 @@ module md5unit #(
 		(* KEEP_HIERARCHY="true" *)
 		unit_ctrl_dummy #( .N_CORES(N_CORES)
 		) ctrl(
-			.CLK(CLK), .PKT_COMM_CLK(PKT_COMM_CLK),
+			.CLK(CLK),
 			// Unit Input
 			.unit_in(unit_in), .unit_in_ctrl(unit_in_ctrl),
 			.unit_in_wr_en(unit_in_wr_en),
@@ -171,13 +172,16 @@ module md5unit #(
 			// Unit Output
 			.dout(dout), .rd_en(rd_en), .empty(empty),
 			// Cores
-			.core_wr_en(core_wr_en), .core_start(core_start),
-			.core_ready(core_ready),
-			.core_din(core_din), .core_wr_addr(core_wr_addr),
-			.core_blk_op(core_blk_op), .core_seq(core_seq),
+			.core_start(core_start), .core_ctx_num(core_ctx_num),
+			.core_seq_num(core_seq_num), .core_ready(core_ready),
+			.core_wr_en(core_wr_en), .core_din(core_din), .core_wr_addr(core_wr_addr),
+			.core_blk_op(core_blk_op), .core_input_seq(core_input_seq),
+			.core_input_ctx(core_input_ctx),
 			.core_set_input_ready(core_set_input_ready),
+			
 			.core_dout(core_dout), .core_dout_en(core_dout_en),
-			.core_dout_seq(core_dout_seq_num),
+			.core_dout_seq_num(core_dout_seq_num),
+			.core_dout_ctx_num(core_dout_ctx_num),
 			.err() // 5:0
 		);
 

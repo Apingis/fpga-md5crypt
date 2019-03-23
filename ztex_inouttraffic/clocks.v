@@ -22,8 +22,6 @@
 
 
 module clocks #(
-	// Using CLK2X
-	//parameter PKT_COMM_FREQ = 135, // adjust UCF
 	parameter CORE_FREQ = 135 // cmt3 - programmable (adjust UCF)
 	)(
 	input IFCLK_IN,
@@ -36,8 +34,8 @@ module clocks #(
 	output progdone_inv,
 
 	output IFCLK,
+	input clk_glbl_en,
 	output PKT_COMM_CLK,
-	input core_clk_glbl_en,
 	output CORE_CLK
 	);
 
@@ -92,13 +90,14 @@ module clocks #(
 
 
 	cmt2 #(
-		.PLL_FREQ(),//PKT_COMM_FREQ),
+		.PLL_FREQ(),
 		.PHASE_SHIFT(-15)
 	) cmt2(
 		.I(IFCLK_IN),
 		.CLK0(IFCLK),
-		.CLK2X(),//PKT_COMM_CLK),
-		.PLL_CLK()//PKT_COMM_CLK)
+		.CE(CE & clk_glbl_en & ~pll_reset),
+		.CLK2X(PKT_COMM_CLK),
+		.PLL_CLK()
 	);
 
 /*
@@ -107,27 +106,15 @@ module clocks #(
 		.I(FXCLK_IN),
 		.O(FXCLK)
 	);
-
-	// Programmable clock #1:
-	cmt_prog #( .F(CMP_FREQ)
-	) cmt1(
-		.I(FXCLK),
-		.progen(progen[1]), .progdata(progdata), .progclk(progclk),
-		.pll_reset(pll_reset),
-		.CE(CE),
-		.progdone_inv(progdone_inv1),
-		.O(CMP_CLK)
-	);
 */
 
 	// Programmable clock #0:
-	//cmt_prog_m3d5 #( .F(CORE_FREQ)
 	cmt_prog #( .F(CORE_FREQ)
 	) cmt3(
 		.I(FXCLK_IN),
 		.progen(progen[0]), .progdata(progdata), .progclk(progclk),
 		.pll_reset(pll_reset),
-		.CE(CE & core_clk_glbl_en),
+		.CE(CE & clk_glbl_en),
 		.progdone_inv(progdone_inv0),
 		.O(CORE_CLK)
 	);

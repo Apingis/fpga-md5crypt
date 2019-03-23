@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 /*
- * This software is Copyright (c) 2018 Denis Burykin
+ * This software is Copyright (c) 2018-2019 Denis Burykin
  * [denis_burykin yahoo com], [denis-burykin2014 yandex ru]
  * and it is hereby released to the general public under the following terms:
  * Redistribution and use in source and binary forms, with or without
@@ -9,50 +9,52 @@
  */
 `include "md5.vh"
 
-
+//
+// Relevant:
+// next_thread_num
+//
 module core_ctrl #(
-	parameter N_CORES = 3,
+	parameter N_CORES = `N_CORES,
 	parameter N_CORES_MSB = `MSB(N_CORES-1),
-	parameter N_THREADS = 4 * N_CORES,
-	parameter N_THREADS_MSB = `MSB(2*N_CORES-1),
-	parameter COMP_INTERVAL = 288 / N_THREADS // must be 24
+	parameter N_THREADS = `N_THREADS,
+	parameter N_THREADS_MSB = `MSB(N_THREADS-1),
+	parameter TOTAL_CYCLES = 288,
+	parameter COMP_INTERVAL = TOTAL_CYCLES / N_THREADS // must be 24
 	)(
 	input CLK,
 	output reg [N_CORES-1:0] core_start = 0,
-	output reg ctx_num,
-	output reg [N_CORES-1:0] seq_num = 0
+	output reg ctx_num = 1,// seq_num = 1
+	output reg [N_CORES-1:0] seq_num = {N_CORES{1'b1}}
 	);
 
-	reg [8:0] cnt = 0;
-	always @(posedge CLK)
-		cnt <= cnt == 287 ? 9'b0 : cnt + 1'b1;
+	// 1. Traverse cores, ctx 0, seq0
+	// 2. ctx1, seq0
+	reg [`MSB(COMP_INTERVAL-1) :0] cnt = 0;
+	reg ctx_num_curr = 0;
+	reg [`MSB(N_CORES-1) :0] core_num = 0;
 
-	always @(posedge CLK)
-		ctx_num <= cnt[0];
+	always @(posedge CLK) begin
+		ctx_num <= ~ctx_num;
 
-	genvar i;
-	generate
-	for (i=0; i < N_CORES; i=i+1) begin:for_start
+		if (|core_start)
+			core_start <= 0;
 
-		always @(posedge CLK) begin
-			if (core_start[i])
-				core_start[i] <= 0;
-			if (cnt == 2*i * COMP_INTERVAL
-					| cnt == 2*i * COMP_INTERVAL + COMP_INTERVAL-1
-					| cnt == 144 + 2*i * COMP_INTERVAL
-					| cnt == 144 + 2*i * COMP_INTERVAL + COMP_INTERVAL-1)
-				core_start[i] <= 1;
-
-			if (cnt == 2*i * COMP_INTERVAL
-					| 2*i * COMP_INTERVAL + COMP_INTERVAL-1)
-				seq_num[i] <= 0;
-
-			if (cnt == 144 + 2*i * COMP_INTERVAL
-					| cnt == 144 + 2*i * COMP_INTERVAL + COMP_INTERVAL-1)
-				seq_num[i] <= 1;
+		if (cnt != COMP_INTERVAL-1)
+			cnt <= cnt + 1'b1;
+		else begin
+			cnt <= 0;
+			if (core_num == N_CORES-1) begin
+				core_num <= 0;
+				ctx_num_curr <= ~ctx_num_curr;
+				if (ctx_num_curr)
+					seq_num <= ~seq_num;
+			end
+			else
+				core_num <= core_num + 1'b1;
 		end
 
+		if (cnt == 0 & ~ctx_num_curr | cnt == 1 & ctx_num_curr)
+			core_start[core_num] <= 1;
 	end
-	endgenerate
 
 endmodule

@@ -23,7 +23,8 @@ module cmt2 #(
 	parameter PLL_FREQ = 0
 	)(
 	input I,
-	output CLK0, 
+	output CLK0,
+	input CE,
 	//output CLK2,
 	output CLK2X,
 	output PLL_CLK
@@ -132,8 +133,9 @@ module cmt2 #(
 		.O(CLK0)
 	);
 */
-	BUFG BUFG_1(
+	BUFGCE BUFGCE_inst (
 		.I(dcm0_clk2x),
+		.CE(CE),
 		.O(CLK2X)
 	);
 

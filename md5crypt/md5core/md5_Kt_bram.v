@@ -8,7 +8,6 @@
  *
  */
 
-//`define	Kt_N_CYCLES		64
 `define	Kt_N_CYCLES		72
 
 `define	Kt(x) (K[32*(`Kt_N_CYCLES-(x))-1 -:32])

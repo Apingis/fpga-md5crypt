@@ -61,14 +61,10 @@ module ztex_inouttraffic(
 		.progdone_inv(progdone_inv),
 		// Produced clocks
 		.IFCLK(IFCLK), 	// for operating I/O pins
-		.PKT_COMM_CLK(),//PKT_COMM_CLK), // for I/O packet processing
-		.core_clk_glbl_en(1'b1),//~cores_idle),
+		.clk_glbl_en(~idle),
+		.PKT_COMM_CLK(PKT_COMM_CLK), // for I/O packet processing
 		.CORE_CLK(CORE_CLK) // for operating computing units
 	);
-
-	assign PKT_COMM_CLK = CORE_CLK;
-	//assign CORE_CLK = PKT_COMM_CLK;
-	//assign PKT_COMM_CLK = IFCLK;
 
 	chip_select chip_select(
 		.CS_IN(CS_IN), .CLK(IFCLK), .CS(CS), .out_z_wait1(out_z_wait1)
@@ -125,13 +121,26 @@ module ztex_inouttraffic(
 		// Application control (via VCR I/O). Set with fpga_set_app_mode()
 		.app_mode(app_mode),
 		// Application status. Available at fpga->wr.io_state.app_status
-		.cores_idle(cores_idle),
+		.cores_idle(app_idle),
 		.app_status(app_status), .pkt_comm_status(pkt_comm_status),
 		.debug2(debug2), .debug3(debug3)
 	);
 
+	// Application error or pkt_comm error: Stop clock generation
 	always @(posedge IFCLK)
 		error_r <= |pkt_comm_status | |app_status;
+
+	// IDLE: Turn off clock buffers (clocks remain running)
+	// after ~1us of inactivity
+	delay #(.INIT(1), .NBITS(6)) delay_idle_inst (.CLK(IFCLK),
+		.in(~hs_input_wr_en // no write into input fifo (IFCLK)
+			& output_fifo_idle // output "prepend" fifo is empty (IFCLK)
+			& app_idle_sync
+		),
+		.out(idle) );
+
+	sync_sig #( .INIT(1) ) sync_app_idle( .sig(app_idle),
+		.clk(IFCLK), .out(app_idle_sync) );
 
 
 	// ********************************************************
@@ -147,6 +156,7 @@ module ztex_inouttraffic(
 		.din(app_dout),
 		.wr_en(app_wr_en),
 		.full(app_full),
+		.idle(output_fifo_idle),
 
 		.rd_clk(IFCLK),
 		.dout(output_dout), // to Cypress IO,

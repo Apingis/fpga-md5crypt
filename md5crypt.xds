@@ -11,12 +11,13 @@
     <property name="Synthesize - XST:Power Reduction" value="false"/>
     <property name="Synthesize - XST:Keep Hierarchy" value="No"/>
     <property name="Synthesize - XST:Other XST Command Line Options" value="-sd ngc"/>
+    <property name="Synthesize - XST:Optimize Instantiated Primitives" value="true"/>
     <property name="Translate:Other Ngdbuild Command Line Options" value="-sd ngc"/>
     <property name="Map:Placer Extra Effort" value="Continue on Impossible"/>
-    <property name="Map:Starting Placer Cost Table (1-100)" value="31"/>
+    <property name="Map:Starting Placer Cost Table (1-100)" value="34"/>
     <property name="Map:Extra Cost Tables" value="0"/>
     <property name="Map:Register Duplication" value="Off"/>
-    <property name="Map:Register Ordering" value="4"/>
+    <property name="Map:Register Ordering" value="8"/>
     <property name="Map:Allow Logic Optimization Across Hierarchy" value="true"/>
     <property name="Map:Generate Detailed MAP Report" value="true"/>
     <property name="Map:LUT Combining" value="Auto"/>

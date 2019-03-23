@@ -14,9 +14,9 @@
 // everything dependent on N_CORES
 //
 module core_input #(
-	parameter N_CORES = 3,
+	parameter N_CORES = `N_CORES,
 	parameter N_CORES_MSB = `MSB(N_CORES-1),
-	parameter N_THREADS = 4 * N_CORES,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
 	input CLK,

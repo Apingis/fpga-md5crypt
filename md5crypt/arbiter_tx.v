@@ -189,7 +189,7 @@ module arbiter_tx #(
 
 	assign init_rd_en = state_in == STATE_IN_PKT_INIT;
 
-	sync_pulse3 sync_pkt_init( .wr_clk(CLK),
+	sync_pulse sync_pkt_init( .wr_clk(CLK),
 		.sig(state_in == STATE_IN_PKT_INIT),
 		.busy(), .rd_clk(CORE_CLK), .out(pkt_init_sync) );
 

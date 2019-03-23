@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 /*
- * This software is Copyright (c) 2018 Denis Burykin
+ * This software is Copyright (c) 2018-2019 Denis Burykin
  * [denis_burykin yahoo com], [denis-burykin2014 yandex ru]
  * and it is hereby released to the general public under the following terms:
  * Redistribution and use in source and binary forms, with or without
@@ -53,79 +53,77 @@ module md5crypt #(
 	localparam N_UNITS = 32;
 	localparam [64*N_UNITS-1 :0] UNITS_CONF = {
 	//  unit|         | unit/core| core |  N   |
-	// dummy| reserved|  type    | dummy| cores| in_r| out_r| node#
-	// warning: in_r must match the count of pass-by nodes
+	// dummy| reserved|  type    | dummy| cores| unused| regs| node#
+	// 'regs' must match the count of pass-by nodes
 /*
-		// center column of fpga
-		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3,		4'd2, 4'd2, 8'd6, // unit #31 n6
-		1'b1, 32'd0, 8'b00_10_10_01, 3'b111, 4'd3,		4'd3, 4'd3, 8'd10, // unit #30 *
-		1'b1, 32'd0, 8'b00_10_10_01, 3'b111, 4'd3,		4'd3, 4'd3, 8'd7, // unit #29 * n7
-		1'b1, 32'd0, 8'b00_10_10_01, 3'b111, 4'd3,		4'd3, 4'd3, 8'd7, // unit #28 *
-		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3,		4'd3, 4'd3, 8'd7, // unit #27
-		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3,		4'd4, 4'd4, 8'd8, // unit #26 n8
-		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3,		4'd4, 4'd4, 8'd8, // unit #25
-		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3,		4'd4, 4'd4, 8'd8, // unit #24
-		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3,		4'd4, 4'd4, 8'd8, // unit #23
-		// left side of fpga
-		1'b1, 32'd0, 8'b00_01_01_01, 3'b111, 4'd3,		4'd2, 4'd2, 8'd6, // unit #22 n6
-		1'b1, 32'd0, 8'b00_01_01_00, 3'b111, 4'd3,		4'd2, 4'd2, 8'd6, // unit #21 *
-		1'b1, 32'd0, 8'b00_01_01_00, 3'b111, 4'd3,		4'd3, 4'd3, 8'd10, // unit #20 *
-		1'b1, 32'd0, 8'b00_01_00_00, 3'b111, 4'd3,		4'd3, 4'd3, 8'd10, // unit #19 *
-		1'b1, 32'd0, 8'b00_01_00_00, 3'b111, 4'd3,		4'd3, 4'd3, 8'd7, // unit #18 * n7
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd3, 4'd3, 8'd7, // unit #17
-		1'b1, 32'd0, 8'b00_01_01_00, 3'b111, 4'd3,		4'd3, 4'd3, 8'd7, // unit #16 *
-		1'b1, 32'd0, 8'b00_01_01_00, 3'b111, 4'd3,		4'd4, 4'd4, 8'd8, // unit #15 ** n8
-		1'b1, 32'd0, 8'b00_01_00_00, 3'b111, 4'd3,		4'd4, 4'd4, 8'd8, // unit #14 *
-		1'b1, 32'd0, 8'b00_01_00_00, 3'b111, 4'd3,		4'd5, 4'd5, 8'd9, // unit #13 * n9
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd5, 4'd5, 8'd9, // unit #12
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd5, 4'd5, 8'd9, // unit #11
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd1, 8'd6, // unit #31
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd3, 8'd8, // unit #30 n8
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd3, 8'd8, // unit #29 n8
+		1'b0, 32'd0, 8'b00_00_10_00, 3'b000, 4'd3, 4'd0,	4'd2, 8'd7, // unit #28
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd2, 8'd7, // unit #27
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd3, 8'd8, // unit #26 n8(3)
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd3, 8'd8, // unit #25
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd3, 8'd8, // unit #24
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd3, 8'd8, // unit #23
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd4, 8'd9, // unit #22 n9(4)
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd4, 8'd9, // unit #21
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd4, 8'd9, // unit #20
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd5, 8'd10, // unit #19 n10(5)
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd5, 8'd10, // unit #18
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd5, 8'd10, // unit #17
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd5, 8'd10, // unit #16
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd5, 8'd10, // unit #15
+		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3, 4'd0,	4'd6, 8'd11, // unit #14
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd5, 8'd10, // unit #13
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd6, 8'd11, // unit #12 n11(6)
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd6, 8'd11, // unit #11
 		// right side of fpga
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd0, 4'd1, 8'd0, // unit #10
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd1, 4'd1, 8'd1, // unit #9 n1
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd1, 4'd1, 8'd1, // unit #8
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd2, 4'd2, 8'd2, // unit #7 n2
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd2, 4'd2, 8'd2, // unit #6
-		1'b1, 32'd0, 8'b00_01_01_01, 3'b111, 4'd3,		4'd3, 4'd3, 8'd3, // unit #5 n3
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd3, 4'd3, 8'd3, // unit #4
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd4, 4'd4, 8'd4, // unit #3 n4
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd4, 4'd4, 8'd4, // unit #2
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd4, 4'd4, 8'd4, // unit #1
-		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3,		4'd5, 4'd5, 8'd11  // unit #0
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd1, 8'd6, // unit #10 n6(1)
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd0, 8'd0, // unit #9 n0
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd1, 8'd1, // unit #8 n1
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd2, 8'd2, // unit #7 n2
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd2, 8'd2, // unit #6
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd3, 8'd3, // unit #5 n3
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd3, 8'd3, // unit #4
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd4, 8'd4, // unit #3 n4
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd4, 8'd4, // unit #2
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd5, 8'd5, // unit #1
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd5, 8'd5  // unit #0
 */
-		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3,		4'd2, 4'd2, 8'd6, // unit #31 n6
-		1'b0, 32'd0, 8'b00_10_10_01, 3'b000, 4'd3,		4'd3, 4'd3, 8'd10, // unit #30 *
-		1'b0, 32'd0, 8'b00_10_10_01, 3'b000, 4'd3,		4'd3, 4'd3, 8'd7, // unit #29 * n7
-		1'b0, 32'd0, 8'b00_10_10_01, 3'b000, 4'd3,		4'd3, 4'd3, 8'd7, // unit #28 *
-		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3,		4'd3, 4'd3, 8'd7, // unit #27
-		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3,		4'd4, 4'd4, 8'd8, // unit #26 n8
-		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3,		4'd4, 4'd4, 8'd8, // unit #25
-		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3,		4'd4, 4'd4, 8'd8, // unit #24
-		1'b0, 32'd0, 8'b00_10_10_10, 3'b000, 4'd3,		4'd4, 4'd4, 8'd8, // unit #23
-		// left side of fpga
-		1'b0, 32'd0, 8'b00_01_01_01, 3'b000, 4'd3,		4'd2, 4'd2, 8'd6, // unit #22 n6
-		1'b0, 32'd0, 8'b00_01_01_00, 3'b000, 4'd3,		4'd2, 4'd2, 8'd6, // unit #21 *
-		1'b0, 32'd0, 8'b00_01_01_00, 3'b000, 4'd3,		4'd3, 4'd3, 8'd10, // unit #20 *
-		1'b0, 32'd0, 8'b00_01_00_00, 3'b000, 4'd3,		4'd3, 4'd3, 8'd10, // unit #19 *
-		1'b0, 32'd0, 8'b00_01_00_00, 3'b000, 4'd3,		4'd3, 4'd3, 8'd7, // unit #18 * n7
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd3, 4'd3, 8'd7, // unit #17
-		1'b0, 32'd0, 8'b00_01_01_00, 3'b000, 4'd3,		4'd3, 4'd3, 8'd7, // unit #16 *
-		1'b0, 32'd0, 8'b00_01_01_00, 3'b000, 4'd3,		4'd4, 4'd4, 8'd8, // unit #15 ** n8
-		1'b0, 32'd0, 8'b00_01_00_00, 3'b000, 4'd3,		4'd4, 4'd4, 8'd8, // unit #14 *
-		1'b0, 32'd0, 8'b00_01_00_00, 3'b000, 4'd3,		4'd5, 4'd5, 8'd9, // unit #13 * n9
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd5, 4'd5, 8'd9, // unit #12
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd5, 4'd5, 8'd9, // unit #11
+
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd1, 8'd6, // unit #31
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd3, 8'd8, // unit #30 n8
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd3, 8'd8, // unit #29 n8
+		1'b1, 32'd0, 8'b00_00_10_00, 3'b111, 4'd3, 4'd0,	4'd2, 8'd7, // unit #28
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd2, 8'd7, // unit #27
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd3, 8'd8, // unit #26 n8(3)
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd3, 8'd8, // unit #25
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd3, 8'd8, // unit #24
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd3, 8'd8, // unit #23
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd4, 8'd9, // unit #22 n9(4)
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd4, 8'd9, // unit #21
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd4, 8'd9, // unit #20
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd5, 8'd10, // unit #19 n10(5)
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd5, 8'd10, // unit #18
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd5, 8'd10, // unit #17
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd5, 8'd10, // unit #16
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd5, 8'd10, // unit #15
+		1'b1, 32'd0, 8'b00_10_10_10, 3'b111, 4'd3, 4'd0,	4'd6, 8'd11, // unit #14
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd5, 8'd10, // unit #13
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd6, 8'd11, // unit #12 n11(6)
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd6, 8'd11, // unit #11
 		// right side of fpga
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd0, 4'd0, 8'd0, // unit #10
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd1, 4'd1, 8'd1, // unit #9 n1
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd1, 4'd1, 8'd1, // unit #8
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd2, 4'd2, 8'd2, // unit #7 n2
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd2, 4'd2, 8'd2, // unit #6
-		1'b0, 32'd0, 8'b00_01_01_01, 3'b000, 4'd3,		4'd3, 4'd3, 8'd3, // unit #5 n3
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd3, 4'd3, 8'd3, // unit #4
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd4, 4'd4, 8'd4, // unit #3 n4
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd4, 4'd4, 8'd4, // unit #2
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd4, 4'd4, 8'd4, // unit #1
-		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3,		4'd5, 4'd5, 8'd11  // unit #0
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd1, 8'd6, // unit #10 n6(1)
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd0, 8'd0, // unit #9 n0
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd1, 8'd1, // unit #8 n1
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd2, 8'd2, // unit #7 n2
+		1'b0, 32'd0, 8'b00_00_00_00, 3'b000, 4'd3, 4'd0,	4'd2, 8'd2, // unit #6
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd3, 8'd3, // unit #5 n3
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd3, 8'd3, // unit #4
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd4, 8'd4, // unit #3 n4
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd4, 8'd4, // unit #2
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd5, 8'd5, // unit #1
+		1'b1, 32'd0, 8'b00_00_00_00, 3'b111, 4'd3, 4'd0,	4'd5, 8'd5  // unit #0
 
 	};
 
@@ -135,16 +133,16 @@ module md5crypt #(
 	// points to the upper level node.
 	localparam N_NODES = 12;
 	localparam [8*N_NODES-1 :0] NODES_CONF = {
-		8'd4,		// #11 (added)
-		8'd6,		// #10 (added)
 		// left side
+		8'd10,	// #11
+		8'd9,		// #10
 		8'd8,		// #9
 		8'd7,		// #8
-		8'd6,		// #7
-		8'd5,		// #6: left bottom
+		8'd6,		// #7: left bottom
 		// center bottom
-		8'd0,		// #5
+		8'd0,		// #6
 		// right side
+		8'd4,		// #5
 		8'd3,		// #4
 		8'd2,		// #3
 		8'd1,		// #2
@@ -180,19 +178,13 @@ module md5crypt #(
 	//
 	// 0x01 - candidates received, comparator is unconfigured (arbiter_tx)
 	// 0x02, 0x04 - bad output from a computing unit (arbiter_rx)
-	// 0x08 - error in PKT_TYPE_CONFIG
+	// 0x08 - received from a computing unit (arbiter_rx), nothing was sent
+	// 0x10 - error in PKT_TYPE_CONFIG
 	//
 	// ************************************************************
-	assign app_status[7:4] = 0;
-
+	assign app_status[7:5] = 0;
 
 	(* KEEP="true" *) wire mode_cmp = ~app_mode[6]; // Use comparator
-
-	//reg error_r = 0;
-	// Application error or pkt_comm error - disable further processing
-	//always @(posedge PKT_COMM_CLK)
-	//	if (|app_status | |pkt_comm_status)
-	//		error_r <= 1;
 
 	delay #( .INIT(1), .NBITS(6) ) delay_cores_idle(
 		.CLK(PKT_COMM_CLK), .in(arbiter_tx_idle), .out(cores_idle) );
@@ -244,8 +236,6 @@ module md5crypt #(
 	// input packet type PKT_TYPE_CONFIG (0x06)
 	//
 	// **************************************************
-	//wire inpkt_config_wr_en = ~empty & ~error_r
-	//	& inpkt_type == PKT_TYPE_CONFIG & inpkt_data & ~inpkt_config_full;
 	wire inpkt_config_wr_rdy = inpkt_type == PKT_TYPE_CONFIG
 		& inpkt_data & ~inpkt_config_full;
 
@@ -256,7 +246,7 @@ module md5crypt #(
 		.CLK(PKT_COMM_CLK),
 		.din(din), .wr_en(inpkt_config_wr_rdy & ~empty),
 		.pkt_end(inpkt_end), .full(inpkt_config_full),
-		.dout1(config_data1), .err(app_status[3])
+		.dout1(config_data1), .err(app_status[4])
 	);
 
 
@@ -265,8 +255,6 @@ module md5crypt #(
 	// input packet type PKT_TYPE_INIT (0x05)
 	//
 	// **************************************************
-	//wire inpkt_init_wr_en = ~empty & ~error_r
-	//	& inpkt_type == PKT_TYPE_INIT & inpkt_data & ~inpkt_init_full;
 	wire inpkt_init_wr_rdy = inpkt_type == PKT_TYPE_INIT
 		& inpkt_data & ~inpkt_init_full;
 
@@ -285,10 +273,6 @@ module md5crypt #(
 	// PKT_TYPE_TEMPLATE_LIST (0x04)
 	//
 	// **************************************************
-	//wire word_list_wr_en = ~empty & ~error_r
-	//	& (inpkt_type == PKT_TYPE_WORD_LIST
-	//		| inpkt_type == PKT_TYPE_TEMPLATE_LIST)
-	//	& inpkt_data & ~word_list_full;
 	wire word_list_wr_rdy = (inpkt_type == PKT_TYPE_WORD_LIST
 			| inpkt_type == PKT_TYPE_TEMPLATE_LIST)
 		& inpkt_data & ~word_list_full;
@@ -323,8 +307,6 @@ module md5crypt #(
 	// input packet type PKT_TYPE_WORD_GEN (0x02)
 	//
 	// **************************************************
-	//wire word_gen_conf_en = ~empty & ~error_r
-	//	& inpkt_type == PKT_TYPE_WORD_GEN & inpkt_data & ~word_gen_conf_full;
 	wire word_gen_conf_rdy = inpkt_type == PKT_TYPE_WORD_GEN
 		& inpkt_data & ~word_gen_conf_full;
 
@@ -374,8 +356,6 @@ module md5crypt #(
 	// input packet type CMP_CONFIG (0x03)
 	//
 	// **************************************************
-	//wire cmp_config_wr_en = ~empty & ~error_r
-	//		& inpkt_type == PKT_TYPE_CMP_CONFIG & inpkt_data & ~cmp_config_full;
 	wire cmp_config_wr_rdy = inpkt_type == PKT_TYPE_CMP_CONFIG
 		& inpkt_data & ~cmp_config_full;
 
@@ -386,7 +366,7 @@ module md5crypt #(
 	wire [4:0] cmp_config_addr;
 	wire [7:0] cmp_config_data;
 
-	md5crypt_cmp_config cmp_config(
+	xcrypt_cmp_config cmp_config(
 		.CLK(PKT_COMM_CLK), .mode_cmp(mode_cmp),
 		.din(din), .wr_en(cmp_config_wr_rdy & ~empty),
 		.full(cmp_config_full), .err(err_cmp_config),
@@ -414,13 +394,11 @@ module md5crypt #(
 	wire [N_UNITS-1:0] unit_in_wr_en, unit_in_afull, unit_in_ready;
 
 	wire [31:0] num_processed_tx;
-	wire [15:0] pkt_id_tx;
 
 	arbiter_tx #(
 		.N_UNITS(N_UNITS), .WORD_MAX_LEN(WORD_MAX_LEN)
 	) arbiter_tx(
-		//.CLK(PKT_COMM_CLK), .CORE_CLK(CORE_CLK), .mode_cmp(mode_cmp),
-		.CLK(PKT_COMM_CLK), .CORE_CLK(PKT_COMM_CLK), .mode_cmp(mode_cmp),
+		.CLK(PKT_COMM_CLK), .CORE_CLK(CORE_CLK), .mode_cmp(mode_cmp),
 		.pkt_id(pkt_id), .word_id(word_id_out), .gen_id(gen_id),
 		.gen_end(gen_end), .word_len(word_len_out),
 
@@ -440,7 +418,7 @@ module md5crypt #(
 		.unit_in_wr_en(unit_in_wr_en),
 		.unit_in_afull(unit_in_afull), .unit_in_ready(unit_in_ready),
 
-		.num_processed_tx(num_processed_tx), .pkt_id_tx(pkt_id_tx),
+		.num_processed_tx(num_processed_tx), .pkt_id_tx(),
 		.pkt_tx_done(pkt_tx_done), .pkt_rx_done(pkt_rx_done),
 		.recv_item(recv_item),
 
@@ -460,8 +438,7 @@ module md5crypt #(
 	bcast_net #( .BCAST_WIDTH(BCAST_WIDTH),
 		.N_NODES(N_NODES), .NODES_CONF(NODES_CONF)
 	) bcast_net(
-		//.CLK(CORE_CLK), .en(bcast_en),
-		.CLK(PKT_COMM_CLK), .en(bcast_en),
+		.CLK(CORE_CLK), .en(bcast_en),
 		.in({ unit_in, unit_in_ctrl }), .out(bcast)
 	);
 
@@ -479,27 +456,20 @@ module md5crypt #(
 	generate
 	for (i=0; i < N_UNITS; i=i+1) begin:units
 
-		// input registers in both directions
+		// unit input
 		wire unit_in_wr_en_u, unit_in_afull_u, unit_in_ready_u;
-		regs2d #( .IN_WIDTH(1), .OUT_WIDTH(2), .STAGES(UNIT_CONF[12 +:4])
-		) unit_in_regs( .CLK(PKT_COMM_CLK),//CORE_CLK),
-			.enter_in(unit_in_wr_en[i]),
-			.enter_out({ unit_in_afull[i], unit_in_ready[i] }),
-			.exit_in(unit_in_wr_en_u),
-			.exit_out({ unit_in_afull_u, unit_in_ready_u })
-		);
-
-		// output registers in both directions
+		// unit output
 		wire [UNIT_OUTPUT_WIDTH-1 :0] dout_u;
 		wire rd_en_u, empty_u;
-		regs2d #( .IN_WIDTH(1), .OUT_WIDTH(UNIT_OUTPUT_WIDTH+1),
+		regs2d #( .IN_WIDTH(2), .OUT_WIDTH(UNIT_OUTPUT_WIDTH+3),
 			.STAGES(UNIT_CONF[8 +:4])
-		) unit_out_regs( .CLK(PKT_COMM_CLK),
-			.enter_in(unit_rd_en[i]),
-			.enter_out({ unit_empty[i],
+		) unit_io_regs(
+			.CLK(CORE_CLK),
+			.enter_in({ unit_in_wr_en[i], unit_rd_en[i] }),
+			.enter_out({ unit_in_afull[i], unit_in_ready[i], unit_empty[i],
 				unit_dout[UNIT_OUTPUT_WIDTH*i +:UNIT_OUTPUT_WIDTH] }),
-			.exit_in(rd_en_u),
-			.exit_out({ empty_u, dout_u })
+			.exit_in({ unit_in_wr_en_u, rd_en_u }),
+			.exit_out({ unit_in_afull_u, unit_in_ready_u, empty_u, dout_u })
 		);
 
 		localparam [63:0] UNIT_CONF = UNITS_CONF [64*i +:64];
@@ -515,7 +485,6 @@ module md5crypt #(
 			.unit_in_wr_en(unit_in_wr_en_u),
 			.unit_in_afull(unit_in_afull_u), .unit_in_ready(unit_in_ready_u),
 
-			.PKT_COMM_CLK(PKT_COMM_CLK),
 			.dout(dout_u), .rd_en(rd_en_u), .empty(empty_u)
 		);
 
@@ -542,11 +511,11 @@ module md5crypt #(
 		.N_UNITS(N_UNITS), .UNIT_OUTPUT_WIDTH(UNIT_OUTPUT_WIDTH),
 		.PKT_NUM_WORDS(4 +`RESULT_LEN/2)
 	) arbiter_rx(
-		.CLK(PKT_COMM_CLK), .mode_cmp(mode_cmp),
+		.CLK(PKT_COMM_CLK), .CORE_CLK(CORE_CLK), .mode_cmp(mode_cmp),
 		.unit_dout(unit_dout),
 		.unit_rd_en(unit_rd_en), .unit_empty(unit_empty),
 		// Iteraction with arbiter_tx
-		.num_processed_tx(num_processed_tx), .pkt_id_tx(pkt_id_tx),
+		.num_processed_tx(num_processed_tx),
 		.pkt_tx_done(pkt_tx_done), .pkt_rx_done(pkt_rx_done),
 		.recv_item(recv_item),
 		// Comparator
@@ -558,7 +527,7 @@ module md5crypt #(
 		.outpkt_type(outpkt_type), .pkt_id(arbiter_pkt_id),
 		.num_processed(arbiter_num_processed), .hash_num(hash_num),
 		.empty(arbiter_empty), .rd_en(arbiter_rd_en),
-		.err(app_status[2:1]), .debug({debug3, debug2})
+		.err(app_status[3:1]), .debug({debug3, debug2})
 	);
 
 

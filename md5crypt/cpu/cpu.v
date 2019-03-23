@@ -12,8 +12,8 @@
 
 module cpu #(
 	parameter WIDTH = 16,
-	parameter N_CORES = 3,
-	parameter N_THREADS = 4 * N_CORES,
+	parameter N_CORES = `N_CORES,
+	parameter N_THREADS = `N_THREADS,
 	parameter N_THREADS_MSB = `MSB(N_THREADS-1)
 	)(
 	input CLK,
@@ -88,8 +88,7 @@ module cpu #(
 	wire [`EXEC_OPT_LEN-1: 0] exec_opt_in;
 	wire [`PARTIAL_INSTR_LEN-1 :0] partial_instruction;
 	
-	instruction #( .N_CORES(N_CORES)
-	) instruction(
+	instruction instruction(
 		.CLK(CLK),
 		.entry_pt_curr(entry_pt_curr),
 		.ts_rd_num(ts_rd_num), .ts_rd(ts_rd),
@@ -190,7 +189,7 @@ module cpu #(
 	reg [`REG_ADDR_MSB :0] reg_wr_addr4;
 	reg [N_THREADS_MSB :0] reg_wr_thread4;
 
-	registers_bram #( .WIDTH(WIDTH), .N_THREADS(N_THREADS)
+	registers_bram #( .WIDTH(WIDTH)
 	) registers(
 		.CLK(CLK),
 		.din1(reg_din1), .din2(reg_din2), .din3(reg_din3),
@@ -208,7 +207,7 @@ module cpu #(
 		.wr_thread_num(reg_wr_thread4),
 		
 		.rd_addr(field_a_in),
-		.rd_en0(STAGE_RD0 & op_type_use_reg0),
+		.rd_en0(STAGE_RD0),// & op_type_use_reg0),
 		.rd_en1(STAGE_RD1 & op_type_use_reg),
 		.rd_thread_num(thread_num), .dout(reg_dout)
 	);
@@ -289,8 +288,10 @@ module cpu #(
 				| op_code == `OP_CODE_ADDC_R_C | op_code == `OP_CODE_SUBB_R_C;
 			iop_sub <= op_code == `OP_CODE_SUB_R_C
 				| op_code == `OP_CODE_SUBB_R_C;
+`ifdef INSTR_SUBB_EN
 			iop_use_cf <= `OP_TYPE_USE_CF(op_code);
-			
+`endif
+
 			iop_grp2 <= op_code == `OP_CODE_INC_RST
 				| op_code == `OP_CODE_MV_R_C | op_code == `OP_CODE_AND;
 			iop_grp2_select <=
@@ -339,7 +340,7 @@ module cpu #(
 	// - sets flags
 	//
 	// *****************************************************************
-	cpu_flags #( .N(`N_FLAGS), .N_THREADS(N_THREADS)
+	cpu_flags #( .N(`N_FLAGS)
 	) cpu_flags(
 		.CLK(CLK),
 		.thread_num(thread_num),

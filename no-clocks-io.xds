@@ -12,10 +12,11 @@
     <property name="Synthesize - XST:Add I/O Buffers" value="false"/>
     <property name="Synthesize - XST:Number of Clock Buffers" value="0"/>
     <property name="Synthesize - XST:LUT Combining" value="Auto"/>
+    <property name="Synthesize - XST:Optimize Instantiated Primitives" value="true"/>
     <property name="Translate:Other Ngdbuild Command Line Options" value="-sd ngc"/>
-    <property name="Map:Placer Extra Effort" value="Normal"/>
-    <property name="Map:Starting Placer Cost Table (1-100)" value="52"/>
-    <property name="Map:Register Duplication" value="On"/>
+    <property name="Map:Placer Extra Effort" value="Continue on Impossible"/>
+    <property name="Map:Starting Placer Cost Table (1-100)" value="27"/>
+    <property name="Map:Register Duplication" value="Off"/>
     <property name="Map:Register Ordering" value="4"/>
     <property name="Map:Trim Unconnected Signals" value="false"/>
     <property name="Map:Allow Logic Optimization Across Hierarchy" value="true"/>
